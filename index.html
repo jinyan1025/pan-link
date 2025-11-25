@@ -1,50 +1,65 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <title>资源检索导航</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    input { width: 260px; padding: 8px; font-size: 16px; }
-    button { padding: 8px 16px; font-size: 16px; margin-left: 8px; }
-    .result { margin-top: 20px; font-size: 18px; }
-  </style>
+<meta charset="UTF-8" />
+<title>资源检索导航</title>
+<style>
+  body { font-family: Arial; padding: 20px; }
+  input { width: 260px; padding: 8px; font-size: 16px; }
+  button { padding: 8px 16px; font-size: 16px; margin-left: 8px; }
+  .result { margin-top: 20px; font-size: 18px; }
+</style>
 </head>
 <body>
 
-  <h2>资源查询系统</h2>
+<h2>资源查询系统</h2>
 
-  <input id="keyword" placeholder="输入资源名称…" />
-  <button id="btn">搜索</button>
+<input id="keyword" placeholder="输入资源名称，如：广播剧、漫画…" />
+<button onclick="search()">搜索</button>
 
-  <div class="result" id="result"></div>
+<div class="result" id="result"></div>
 
-  <script type="module">
-    import baidupanData from './baidupanData.js';
+<script>
+let data = {};
+let dataReady = false;
 
-    const btn = document.getElementById('btn');
-    const resultEl = document.getElementById('result');
-    const input = document.getElementById('keyword');
+fetch("data.json")
+  .then((res) => res.json())
+  .then((json) => {
+    data = json;
+    dataReady = true;
+  })
+  .catch(() => {
+    const result = document.getElementById("result");
+    result.innerHTML = "数据加载失败，请刷新页面重试。";
+  });
 
-    btn.addEventListener('click', () => {
-      const key = input.value.trim();
-      if (!key) {
-        resultEl.innerText = '请输入名称…';
-        return;
-      }
+function search() {
+  const key = document.getElementById("keyword").value.trim();
+  const result = document.getElementById("result");
 
-      const link = baidupanData[key];
-      if (link) {
-        resultEl.innerHTML = `
-          <b>${key}</b><br>
-          <a href="${link}" target="_blank">${link}</a><br>
-          提取码：tpi6
-        `;
-      } else {
-        resultEl.innerText = '未找到对应资源，请检查名称。';
-      }
-    });
-  </script>
+  if (!key) {
+    result.innerHTML = "请输入名称，例如：广播剧、漫画…";
+    return;
+  }
+
+  if (!dataReady) {
+    result.innerHTML = "数据加载中，请稍后再试…";
+    return;
+  }
+
+  const link = data[key];
+  if (link) {
+    result.innerHTML = `
+      <b>${key}</b><br />
+      <a href="${link}" target="_blank">${link}</a><br />
+      提取码：ct67
+    `;
+  } else {
+    result.innerHTML = "未找到对应资源，请检查名称或联系管理员。";
+  }
+}
+</script>
 
 </body>
 </html>
