@@ -164,6 +164,34 @@ main {
   align-items: center;
   margin-bottom: 24px;
   width: 100%;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.search-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.search-controls select {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #3c4b57;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+}
+
+.search-controls select:hover {
+  border-color: #1f6bff;
+}
+
+.search-controls select:focus {
+  border-color: #1f6bff;
+  box-shadow: 0 0 0 2px rgba(31, 107, 255, 0.1);
 }
 
 .search-title {
@@ -320,6 +348,16 @@ main {
   background: #1f6bff;
   border-color: #1f6bff;
   color: #fff;
+}
+
+.pagination-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-ellipsis {
+  padding: 0 8px;
+  color: #6c7784;
 }
 
 .back-to-search {
@@ -730,3 +768,32 @@ main {
     border-color: #1f6bff;
     color: #1f6bff;
   }
+
+/* Toast 提示样式 */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #fff;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast-success {
+  background: #67c23a;
+}
+
+.toast-error {
+  background: #f56c6c;
+}

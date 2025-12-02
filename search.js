@@ -9,6 +9,9 @@ let data = {};
 let dataReady = false;
 let currentResults = [];
 let currentFilter = 'all';
+let currentPage = 1;
+let pageSize = 10; // 每页显示数量
+let currentSort = 'default'; // 排序方式
 
 const getPwdFromLink = (link) => {
   try {
@@ -20,7 +23,7 @@ const getPwdFromLink = (link) => {
   }
 };
 
-// 多个数据源配置
+// 多个数据源配置（按内容分类）
 const dataSources = [
   'guangboju-wanjie.json',    // 完结广播剧
   'guangboju-gengxin.json',   // 更新中广播剧
@@ -29,7 +32,6 @@ const dataSources = [
   'manhua-wanjie.json',       // 完结漫画
   'manhua-gengxin.json',      // 更新中漫画
   'qita.json',                // 其他资源
-  'data.json'
 ];
 
 // 加载所有数据源
@@ -40,9 +42,18 @@ Promise.all(
       .catch(() => ({})) // 文件不存在时返回空对象
   )
 ).then(results => {
-  // 合并所有数据
+  // 合并所有数据（支持嵌套结构）
   results.forEach(fileData => {
-    Object.assign(data, fileData);
+    Object.entries(fileData).forEach(([key, value]) => {
+      // 如果value是对象且不是链接，说明是分类嵌套
+      if (typeof value === 'object' && value !== null && !key.includes('http')) {
+        // 展开嵌套的分类数据
+        Object.assign(data, value);
+      } else {
+        // 普通的 名称:链接 格式
+        data[key] = value;
+      }
+    });
   });
   dataReady = true;
   console.log('已加载资源数量:', Object.keys(data).length);
@@ -83,11 +94,23 @@ function performSearch(keyword) {
         未找到包含"${keyword}"的资源，请尝试其他关键词。
       </div>
     `;
+    document.getElementById('pagination').innerHTML = '';
     return;
   }
   
-  // 渲染结果列表
-  renderResults(matched);
+  // 重置到第一页并渲染
+  currentPage = 1;
+  renderResultsWithPagination(matched);
+}
+
+function renderResultsWithPagination(results) {
+  const totalPages = Math.ceil(results.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const pageResults = results.slice(startIndex, endIndex);
+  
+  renderResults(pageResults);
+  renderPagination(totalPages, results);
 }
 
 function renderResults(results) {
@@ -116,6 +139,113 @@ function renderResults(results) {
   }).join('');
 }
 
+function renderPagination(totalPages, results) {
+  const pagination = document.getElementById('pagination');
+  
+  if (totalPages <= 1) {
+    pagination.innerHTML = '';
+    return;
+  }
+  
+  let html = '';
+  
+  // 上一页按钮
+  html += `<button class="pagination-btn ${currentPage === 1 ? 'disabled' : ''}" 
+    onclick="goToPage(${currentPage - 1}, ${JSON.stringify(results).replace(/"/g, '&quot;')})"
+    ${currentPage === 1 ? 'disabled' : ''}>‹</button>`;
+  
+  // 页码按钮
+  const maxVisiblePages = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  
+  if (endPage - startPage < maxVisiblePages - 1) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+  
+  if (startPage > 1) {
+    html += `<button class="pagination-btn" onclick="goToPage(1)">1</button>`;
+    if (startPage > 2) {
+      html += `<span class="pagination-ellipsis">...</span>`;
+    }
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" 
+      onclick="goToPage(${i})">${i}</button>`;
+  }
+  
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      html += `<span class="pagination-ellipsis">...</span>`;
+    }
+    html += `<button class="pagination-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+  }
+  
+  // 下一页按钮
+  html += `<button class="pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" 
+    onclick="goToPage(${currentPage + 1})"
+    ${currentPage === totalPages ? 'disabled' : ''}>›</button>`;
+  
+  pagination.innerHTML = html;
+}
+
+function goToPage(page) {
+  const filteredResults = getFilteredResults();
+  const totalPages = Math.ceil(filteredResults.length / pageSize);
+  
+  if (page < 1 || page > totalPages) return;
+  
+  currentPage = page;
+  renderResultsWithPagination(filteredResults);
+  
+  // 滚动到顶部
+  document.querySelector('.results-content').scrollIntoView({ behavior: 'smooth' });
+}
+
+function getFilteredResults() {
+  let results = currentResults;
+  
+  // 筛选
+  if (currentFilter !== 'all') {
+    results = results.filter(([name]) => {
+      switch(currentFilter) {
+        case 'guangboju': return name.includes('广播剧') || name.includes('有声');
+        case 'xiaoshuo': return name.includes('小说');
+        case 'manhua': return name.includes('漫画');
+        case 'qita': return !name.includes('广播剧') && !name.includes('小说') && !name.includes('漫画') && !name.includes('有声');
+        default: return true;
+      }
+    });
+  }
+  
+  // 排序
+  if (currentSort === 'az') {
+    results = [...results].sort((a, b) => a[0].localeCompare(b[0], 'zh-CN'));
+  } else if (currentSort === 'za') {
+    results = [...results].sort((a, b) => b[0].localeCompare(a[0], 'zh-CN'));
+  }
+  
+  return results;
+}
+
+// 排序变更
+function handleSortChange() {
+  currentSort = document.getElementById('sortSelect').value;
+  currentPage = 1;
+  const filteredResults = getFilteredResults();
+  document.getElementById('resultCount').textContent = filteredResults.length;
+  renderResultsWithPagination(filteredResults);
+}
+
+// 每页条数变更
+function handlePageSizeChange() {
+  pageSize = parseInt(document.getElementById('pageSizeSelect').value);
+  currentPage = 1;
+  const filteredResults = getFilteredResults();
+  renderResultsWithPagination(filteredResults);
+}
+
 function getCategoryFromName(name) {
   if (name.includes('广播剧')) return '广播剧';
   if (name.includes('小说')) return '小说';
@@ -129,14 +259,33 @@ function getRandomDate() {
 }
 
 function getSourceFromLink(link) {
-  if (link.includes('baidu.com')) return '百度网盘';
+  if (link.includes('pan.baidu.com')) return '百度网盘';
+  if (link.includes('pan.quark.cn') || link.includes('quark.cn')) return '夸克网盘';
+  if (link.includes('uc.cn') || link.includes('drive.uc.cn')) return 'UC网盘';
+  if (link.includes('xunlei.com') || link.includes('pan.xunlei.com')) return '迅雷网盘';
   return '其他网盘';
 }
 
 function copyLink(link) {
   navigator.clipboard.writeText(link).then(() => {
-    alert('链接已复制到剪贴板');
+    showToast('链接已复制到剪贴板', 'success');
+  }).catch(() => {
+    showToast('复制失败，请手动复制', 'error');
   });
+}
+
+// 简易Toast提示
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
 }
 
 // 详情弹窗功能
@@ -342,9 +491,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
       
-      // 更新结果数量和列表
+      // 重置到第一页并更新结果
+      currentPage = 1;
       document.getElementById('resultCount').textContent = filteredResults.length;
-      renderResults(filteredResults);
+      renderResultsWithPagination(filteredResults);
     });
   });
 });
