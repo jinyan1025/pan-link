@@ -31,6 +31,7 @@ const dataSources = [
   'xiaoshuo-gengxin.json',    // 更新中小说
   'manhua-wanjie.json',       // 完结漫画
   'manhua-gengxin.json',      // 更新中漫画
+  'youshengjv.json',          // 有声剧
   'qita.json',                // 其他资源
 ];
 
