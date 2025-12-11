@@ -52,6 +52,29 @@ function processInput() {
     results.push(`  "${name}": "${url}"`);
   }
 
+  // 处理迅雷格式：上一行是文件名/标题，本行含“迅雷链接：”或包含thunder/magnet/pan.xunlei.com
+  const allLines = inputText.split('\n');
+  for (let i = 0; i < allLines.length; i++) {
+    const line = allLines[i];
+    const urlMatch = line.match(/(thunder:\/\/[^\s]+|magnet:\?[^\s]+|https:\/\/pan\.xunlei\.com\/s\/[^\s]+)/);
+    if (line.includes('迅雷链接') || urlMatch) {
+      const url = urlMatch ? urlMatch[0].trim() : line.replace(/.*迅雷链接[:：]\s*/, '').trim();
+      let name = '';
+      for (let j = i - 1; j >= 0; j--) {
+        const prev = allLines[j].trim();
+        if (!prev) continue;
+        name = prev
+          .replace(/^文件名[:：]\s*/, '')
+          .replace(/^名称[:：]\s*/, '')
+          .replace(/^分享文件[:：]\s*/, '');
+        break;
+      }
+      if (name && url) {
+        results.push(`  "${name}": "${url}"`);
+      }
+    }
+  }
+
   console.log('\n--- 转换结果 ---\n');
   console.log(results.join(',\n'));
   console.log('\n--- 结束 ---');
